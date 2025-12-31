@@ -1,0 +1,172 @@
+/**
+ * Styles Gantt - Module Diagramme de Gantt CEEAC
+ */
+
+.gantt-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 80vh;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background: white;
+}
+
+.gantt-container svg {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Barres de tâches */
+.gantt .bar-wrapper .bar {
+    rx: 4;
+    transition: all 0.2s;
+}
+
+.gantt .bar-wrapper .bar.gantt-critique {
+    fill: #dc3545 !important;
+}
+
+.gantt .bar-wrapper .bar.gantt-vigilance {
+    fill: #ffc107 !important;
+}
+
+.gantt .bar-wrapper .bar.gantt-normal {
+    fill: #0d6efd !important;
+}
+
+.gantt .bar-wrapper .bar.gantt-phase {
+    fill: #1e40af !important;
+    stroke: #1e3a8a !important;
+    stroke-width: 2 !important;
+}
+
+.gantt .bar-wrapper .bar.gantt-milestone {
+    fill: #7c3aed !important;
+    rx: 50% !important;
+    ry: 50% !important;
+}
+
+/* Styles pour les jalons (diamants) */
+.gantt .bar-wrapper[data-type="milestone"] .bar {
+    fill: #7c3aed !important;
+    transform: rotate(45deg);
+}
+
+/* Alternative: utiliser une forme de losange pour les jalons */
+.gantt .bar-wrapper .bar[class*="milestone"] {
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.gantt .bar-wrapper .bar.gantt-critical {
+    stroke: #dc3545;
+    stroke-width: 2;
+    stroke-dasharray: 5,5;
+}
+
+.gantt .bar-wrapper .bar:hover {
+    opacity: 0.8;
+    filter: brightness(1.1);
+    cursor: pointer;
+}
+
+.gantt .bar-wrapper .bar-progress {
+    fill: rgba(255, 255, 255, 0.4);
+    opacity: 0.8;
+}
+
+/* Amélioration de l'affichage de la progression */
+.gantt .bar-progress {
+    fill: rgba(16, 185, 129, 0.6) !important;
+}
+
+.gantt .bar-label {
+    fill: white;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Grille */
+.gantt .grid-background {
+    fill: #f9fafb;
+}
+
+.gantt .grid-row {
+    fill: white;
+}
+
+.gantt .grid-row:nth-child(even) {
+    fill: #f9fafb;
+}
+
+.gantt .row-line {
+    stroke: #e5e7eb;
+}
+
+.gantt .today-highlight {
+    fill: rgba(239, 68, 68, 0.1);
+}
+
+/* Flèches de dépendances */
+.gantt .arrow {
+    stroke: #6b7280;
+    stroke-width: 2;
+    fill: #6b7280;
+    marker-end: url(#arrowhead);
+}
+
+.gantt .arrow:hover {
+    stroke: var(--ceeac-blue, #0d6efd);
+    stroke-width: 3;
+    fill: var(--ceeac-blue, #0d6efd);
+}
+
+/* Amélioration de l'affichage hiérarchique dans la liste */
+.gantt .lower-text,
+.gantt .upper-text {
+    font-size: 12px;
+    fill: #374151;
+}
+
+/* Indentation pour les sous-tâches */
+.gantt .row-label {
+    padding-left: 20px;
+}
+
+/* Barre d'outils Gantt */
+.gantt-toolbar {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0.75rem 1rem;
+}
+
+/* Amélioration de l'affichage des jalons */
+.gantt .bar-wrapper .bar[class*="milestone"] {
+    width: 20px !important;
+    height: 20px !important;
+    x: calc(50% - 10px);
+    y: calc(50% - 10px);
+}
+
+/* Styles pour les tâches critiques */
+.gantt .bar-wrapper .bar.gantt-critical {
+    stroke: #dc3545 !important;
+    stroke-width: 2 !important;
+    stroke-dasharray: 5,5 !important;
+    animation: pulse-critical 2s infinite;
+}
+
+@keyframes pulse-critical {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .gantt-container {
+        max-height: 60vh;
+    }
+    
+    .gantt-toolbar .btn-group {
+        flex-wrap: wrap;
+    }
+}
+

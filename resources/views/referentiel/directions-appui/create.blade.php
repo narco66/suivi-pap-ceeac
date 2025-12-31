@@ -1,0 +1,155 @@
+<x-app-layout>
+    <x-slot name="header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fw-bold text-ceeac-blue">
+                <i class="bi bi-briefcase me-2"></i>Créer une direction d'appui
+            </h2>
+            <a href="{{ route('directions-appui.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+            </a>
+        </div>
+    </x-slot>
+
+    <!-- Messages flash -->
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    <div class="card card-ceeac">
+        <div class="card-header bg-ceeac-gradient text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-briefcase me-2"></i>Informations de la direction d'appui
+            </h5>
+        </div>
+        <div class="card-body">
+            @if($errors->any())
+                <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Erreurs de validation
+                    </h6>
+                    <ul class="mb-0 small">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('directions-appui.store') }}" id="directionAppuiForm">
+                @csrf
+
+                <!-- Code et Libellé -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label for="code" class="form-label fw-semibold">
+                            <i class="bi bi-tag me-1"></i>Code <span class="text-danger">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control form-control-ceeac @error('code') is-invalid @enderror" 
+                            id="code" 
+                            name="code" 
+                            value="{{ old('code') }}" 
+                            placeholder="Ex: DA001"
+                            maxlength="32"
+                            required
+                        >
+                        @error('code')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Code unique identifiant la direction d'appui.
+                        </small>
+                    </div>
+                    <div class="col-md-8">
+                        <label for="libelle" class="form-label fw-semibold">
+                            <i class="bi bi-card-heading me-1"></i>Libellé <span class="text-danger">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control form-control-ceeac @error('libelle') is-invalid @enderror" 
+                            id="libelle" 
+                            name="libelle" 
+                            value="{{ old('libelle') }}" 
+                            placeholder="Nom de la direction d'appui"
+                            maxlength="255"
+                            required
+                        >
+                        @error('libelle')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Nom complet de la direction d'appui.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <label for="description" class="form-label fw-semibold">
+                            <i class="bi bi-file-text me-1"></i>Description
+                        </label>
+                        <textarea 
+                            class="form-control form-control-ceeac @error('description') is-invalid @enderror" 
+                            id="description" 
+                            name="description" 
+                            rows="4"
+                            placeholder="Description détaillée de la direction d'appui...">{{ old('description') }}</textarea>
+                        @error('description')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Description détaillée des missions et responsabilités de la direction d'appui.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Statut -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="actif" class="form-label fw-semibold">
+                            <i class="bi bi-toggle-on me-1"></i>Statut
+                        </label>
+                        <select 
+                            name="actif" 
+                            id="actif" 
+                            class="form-select form-control-ceeac @error('actif') is-invalid @enderror"
+                        >
+                            <option value="1" {{ old('actif', '1') == '1' ? 'selected' : '' }}>Active</option>
+                            <option value="0" {{ old('actif') == '0' ? 'selected' : '' }}>Inactive</option>
+                        </select>
+                        @error('actif')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Statut de la direction d'appui dans le système.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="d-flex gap-2 justify-content-end mt-4 pt-4 border-top">
+                    <a href="{{ route('directions-appui.index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-ceeac">
+                        <i class="bi bi-check-circle me-2"></i>Créer la direction d'appui
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</x-app-layout>
+
