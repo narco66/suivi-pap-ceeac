@@ -41,4 +41,55 @@ class Kpi extends Model
         return $this->hasMany(Alerte::class, 'action_prioritaire_id', 'action_prioritaire_id')
             ->where('type', 'kpi_non_atteint');
     }
+
+    /**
+     * Relation avec le département (via action prioritaire -> direction technique)
+     * Utilise une relation indirecte via actionPrioritaire
+     */
+    public function departement()
+    {
+        // Relation indirecte : Kpi -> ActionPrioritaire -> DirectionTechnique -> Departement
+        // On utilise une accessor plutôt qu'une relation Eloquent directe
+        return $this->actionPrioritaire?->departement;
+    }
+
+    /**
+     * Scope pour filtrer les KPIs par département
+     */
+    public function scopeForDepartment($query, ?int $departmentId)
+    {
+        if ($departmentId === null) {
+            return $query->whereDoesntHave('actionPrioritaire.directionTechnique');
+        }
+
+        return $query->whereHas('actionPrioritaire.directionTechnique', function ($q) use ($departmentId) {
+            $q->where('departement_id', $departmentId);
+        });
+    }
+
+    /**
+     * Récupérer l'ID du département du KPI
+     */
+    public function getDepartmentId(): ?int
+    {
+        return $this->actionPrioritaire?->getDepartmentId();
+    }
+
+    /**
+     * Vérifier si le KPI est lié à une action d'appui
+     */
+    public function isAppui(): bool
+    {
+        return $this->actionPrioritaire?->isAppui() ?? false;
+    }
+
+    /**
+     * Scope pour filtrer les KPIs d'appui uniquement
+     */
+    public function scopeForAppui($query)
+    {
+        return $query->whereHas('actionPrioritaire', function ($q) {
+            $q->whereNotNull('direction_appui_id');
+        });
+    }
 }

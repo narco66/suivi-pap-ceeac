@@ -145,3 +145,4 @@ npm run dev
 
 **Prochaine action recommandée** : Compiler les assets et tester l'accès à `/gantt`
 
+

@@ -14,9 +14,20 @@ class TacheController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+        
         $query = Tache::with(['actionPrioritaire.objectif.papaVersion.papa', 'responsable', 'tacheParent'])
             ->whereNull('tache_parent_id') // Seulement les tâches principales
             ->orderBy('date_fin_prevue', 'asc');
+
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        // Un commissaire ne voit que les tâches de son département
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $query->forDepartment($departmentId);
+            }
+        }
 
         // Filtre par statut
         if ($request->filled('statut')) {
@@ -56,9 +67,15 @@ class TacheController extends Controller
 
         $taches = $query->paginate(20);
 
-        // Récupérer les actions pour le filtre
-        $actions = ActionPrioritaire::orderBy('code')
-            ->get()
+        // Récupérer les actions pour le filtre (scoppées par département pour les commissaires)
+        $actionsQuery = ActionPrioritaire::orderBy('code');
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $actionsQuery->forDepartment($departmentId);
+            }
+        }
+        $actions = $actionsQuery->get()
             ->map(function($action) {
                 return [
                     'id' => $action->id,
@@ -66,14 +83,24 @@ class TacheController extends Controller
                 ];
             });
 
-        // Statistiques
+        // Statistiques (scoppées par département pour les commissaires)
+        $statsQuery = Tache::whereNull('tache_parent_id');
+        
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $statsQuery->forDepartment($departmentId);
+            }
+        }
+        
         $stats = [
-            'total' => Tache::whereNull('tache_parent_id')->count(),
-            'en_cours' => Tache::whereNull('tache_parent_id')->where('statut', 'en_cours')->count(),
-            'terminees' => Tache::whereNull('tache_parent_id')->where('statut', 'termine')->count(),
-            'en_retard' => Tache::whereNull('tache_parent_id')->where('statut', 'en_retard')->count(),
-            'planifiees' => Tache::whereNull('tache_parent_id')->where('statut', 'planifie')->count(),
-            'bloquees' => Tache::whereNull('tache_parent_id')->where('statut', 'bloque')->count(),
+            'total' => (clone $statsQuery)->count(),
+            'en_cours' => (clone $statsQuery)->where('statut', 'en_cours')->count(),
+            'terminees' => (clone $statsQuery)->where('statut', 'termine')->count(),
+            'en_retard' => (clone $statsQuery)->where('statut', 'en_retard')->count(),
+            'planifiees' => (clone $statsQuery)->where('statut', 'planifie')->count(),
+            'bloquees' => (clone $statsQuery)->where('statut', 'bloque')->count(),
         ];
 
         return view('papa.taches.index', compact('taches', 'actions', 'stats'));
@@ -96,7 +123,7 @@ class TacheController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         try {
             $tache = Tache::with([
@@ -112,7 +139,7 @@ class TacheController extends Controller
                 },
             ])->findOrFail($id);
             
-            // Vérifier l'autorisation après avoir chargé la tâche
+            // 🔒 SÉCURITÉ : Vérifier que le commissaire peut voir cette tâche
             $this->authorize('view', $tache);
 
             // Statistiques de la tâche

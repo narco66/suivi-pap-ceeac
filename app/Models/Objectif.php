@@ -40,4 +40,34 @@ class Objectif extends Model
     {
         return $this->hasMany(ActionPrioritaire::class);
     }
+
+    /**
+     * Scope pour filtrer les objectifs par département
+     * Un objectif appartient à un département s'il a au moins une action prioritaire
+     * liée à une direction technique de ce département
+     */
+    public function scopeForDepartment($query, ?int $departmentId)
+    {
+        if ($departmentId === null) {
+            return $query->whereDoesntHave('actionsPrioritaires.directionTechnique');
+        }
+
+        return $query->whereHas('actionsPrioritaires', function ($q) use ($departmentId) {
+            $q->forDepartment($departmentId);
+        });
+    }
+
+    /**
+     * Vérifier si l'objectif a des actions dans un département donné
+     */
+    public function hasActionsInDepartment(?int $departmentId): bool
+    {
+        if ($departmentId === null) {
+            return false;
+        }
+
+        return $this->actionsPrioritaires()
+            ->forDepartment($departmentId)
+            ->exists();
+    }
 }

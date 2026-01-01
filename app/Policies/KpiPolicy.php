@@ -33,6 +33,30 @@ class KpiPolicy
             return true;
         }
         
+        // Secrétaire Général : peut voir uniquement les KPIs d'appui
+        if ($user->isSecretaireGeneral()) {
+            // 🔒 SÉCURITÉ : Le SG ne peut voir QUE les KPIs d'appui
+            if (!$kpi->isAppui()) {
+                return false; // Accès interdit aux KPIs techniques
+            }
+            return $user->hasPermissionTo('view kpi') || 
+                   $user->hasPermissionTo('view papa');
+        }
+        
+        // Commissaire : peut voir uniquement les KPIs de son département
+        if ($user->isCommissaire()) {
+            $userDepartmentId = $user->getDepartmentId();
+            $kpiDepartmentId = $kpi->getDepartmentId();
+            
+            // Si le KPI n'a pas de département, le commissaire ne peut pas le voir
+            if ($kpiDepartmentId === null) {
+                return false;
+            }
+            
+            // Vérifier que le KPI appartient au département du commissaire
+            return $userDepartmentId === $kpiDepartmentId;
+        }
+        
         return $user->hasPermissionTo('view kpi') || 
                $user->hasPermissionTo('view papa') ||
                $user->can('view kpi');

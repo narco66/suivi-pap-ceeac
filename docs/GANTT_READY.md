@@ -161,3 +161,4 @@ php artisan permission:cache-reset
 
 **Prochaine action** : Compiler les assets (`npm run build`) et tester l'accès à `/gantt`
 
+

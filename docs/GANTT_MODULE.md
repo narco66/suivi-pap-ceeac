@@ -177,3 +177,4 @@ Menu **PAPA → Vue Gantt** ou directement `/gantt`
 3. **Tests** : Créer tests unitaires et feature tests
 4. **Seeder** : Créer données de démo (50-150 tâches)
 
+

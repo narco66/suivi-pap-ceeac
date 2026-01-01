@@ -33,6 +33,30 @@ class AlertePolicy
             return true;
         }
         
+        // Secrétaire Général : peut voir uniquement les alertes d'appui
+        if ($user->isSecretaireGeneral()) {
+            // 🔒 SÉCURITÉ : Le SG ne peut voir QUE les alertes d'appui
+            if (!$alerte->isAppui()) {
+                return false; // Accès interdit aux alertes techniques
+            }
+            return $user->hasPermissionTo('view alerte') || 
+                   $user->hasPermissionTo('view papa');
+        }
+        
+        // Commissaire : peut voir uniquement les alertes de son département
+        if ($user->isCommissaire()) {
+            $userDepartmentId = $user->getDepartmentId();
+            $alerteDepartmentId = $alerte->getDepartmentId();
+            
+            // Si l'alerte n'a pas de département, le commissaire ne peut pas la voir
+            if ($alerteDepartmentId === null) {
+                return false;
+            }
+            
+            // Vérifier que l'alerte appartient au département du commissaire
+            return $userDepartmentId === $alerteDepartmentId;
+        }
+        
         // Utilisateur assigné à l'alerte
         if ($alerte->assignee_a_id && $alerte->assignee_a_id === $user->id) {
             return true;

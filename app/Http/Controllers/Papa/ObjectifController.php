@@ -15,8 +15,21 @@ class ObjectifController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+        
         $query = Objectif::with(['papaVersion.papa', 'actionsPrioritaires'])
             ->orderBy('code', 'asc');
+
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        // Un commissaire ne voit que les objectifs ayant des actions de son département
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $query->whereHas('actionsPrioritaires', function($q) use ($departmentId) {
+                    $q->forDepartment($departmentId);
+                });
+            }
+        }
 
         // Filtre par version
         if ($request->filled('version_id')) {
@@ -57,12 +70,24 @@ class ObjectifController extends Controller
             $versionSelected = PapaVersion::with('papa')->find($request->version_id);
         }
 
-        // Statistiques
+        // Statistiques (scoppées par département pour les commissaires)
+        $statsQuery = Objectif::query();
+        
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $statsQuery->whereHas('actionsPrioritaires', function($q) use ($departmentId) {
+                    $q->forDepartment($departmentId);
+                });
+            }
+        }
+        
         $stats = [
-            'total' => Objectif::count(),
-            'en_cours' => Objectif::where('statut', 'en_cours')->count(),
-            'termines' => Objectif::where('statut', 'termine')->count(),
-            'planifies' => Objectif::where('statut', 'planifie')->count(),
+            'total' => (clone $statsQuery)->count(),
+            'en_cours' => (clone $statsQuery)->where('statut', 'en_cours')->count(),
+            'termines' => (clone $statsQuery)->where('statut', 'termine')->count(),
+            'planifies' => (clone $statsQuery)->where('statut', 'planifie')->count(),
         ];
 
         return view('papa.objectifs.index', compact('objectifs', 'versions', 'versionSelected', 'stats'));
@@ -115,8 +140,10 @@ class ObjectifController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
+        $user = $request->user();
+        
         $objectif = Objectif::with([
             'papaVersion.papa',
             'actionsPrioritaires.taches' => function($query) {
@@ -125,6 +152,20 @@ class ObjectifController extends Controller
             'actionsPrioritaires.kpis',
             'actionsPrioritaires.alertes',
         ])->findOrFail($id);
+
+        // 🔒 SÉCURITÉ : Vérifier que le commissaire peut voir cet objectif
+        // Un commissaire ne peut voir que les objectifs ayant des actions de son département
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $hasDepartmentActions = $objectif->actionsPrioritaires()
+                    ->forDepartment($departmentId)
+                    ->exists();
+                if (!$hasDepartmentActions) {
+                    abort(403, 'Accès interdit : cet objectif ne relève pas de votre département.');
+                }
+            }
+        }
 
         // Statistiques de l'objectif
         $stats = [

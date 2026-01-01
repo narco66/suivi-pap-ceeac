@@ -250,3 +250,4 @@ En cas de problème persistant:
 3. Vérifier la console du navigateur (F12)
 4. Vérifier que les assets sont compilés: `npm run build`
 
+

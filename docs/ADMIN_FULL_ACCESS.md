@@ -160,3 +160,4 @@ Après avoir exécuté la commande, l'utilisateur `admin@ceeac.int` doit pouvoir
 L'utilisateur `admin@ceeac.int` a maintenant **TOUS les droits** sur l'application grâce au rôle `admin_dsi` qui bypass toutes les vérifications de permissions.
 
 
+

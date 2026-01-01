@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Referentiel;
 
+use App\Models\Commission;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -13,10 +14,9 @@ class UpdateCommissionRequest extends FormRequest
     public function authorize(): bool
     {
         $commission = $this->route('commission');
-        if ($commission instanceof \App\Models\Commission) {
-            return $this->user()->can('update', $commission);
-        }
-        return $this->user()->can('update', \App\Models\Commission::class);
+        $model = $commission instanceof Commission ? $commission : Commission::find($commission);
+
+        return $model ? $this->user()->can('update', $model) : false;
     }
 
     /**

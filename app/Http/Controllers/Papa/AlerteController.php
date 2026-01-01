@@ -13,6 +13,8 @@ class AlerteController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+        
         $query = Alerte::with([
                 'tache',
                 'actionPrioritaire',
@@ -20,6 +22,15 @@ class AlerteController extends Controller
                 'assigneeA'
             ])
             ->orderBy('date_creation', 'desc');
+
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        // Un commissaire ne voit que les alertes de son département
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $query->forDepartment($departmentId);
+            }
+        }
 
         // Filtres
         if ($request->filled('statut')) {
@@ -46,23 +57,45 @@ class AlerteController extends Controller
 
         $alertes = $query->paginate(20);
 
-        // Statistiques pour les filtres
+        // Statistiques pour les filtres (scoppées par département pour les commissaires)
+        $statsQuery = Alerte::query();
+        
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $statsQuery->forDepartment($departmentId);
+            }
+        }
+        
         $stats = [
-            'total' => Alerte::count(),
-            'ouvertes' => Alerte::whereIn('statut', ['ouverte', 'en_cours'])->count(),
-            'resolues' => Alerte::where('statut', 'resolue')->count(),
-            'critiques' => Alerte::where('criticite', 'critique')->whereIn('statut', ['ouverte', 'en_cours'])->count(),
+            'total' => (clone $statsQuery)->count(),
+            'ouvertes' => (clone $statsQuery)->whereIn('statut', ['ouverte', 'en_cours'])->count(),
+            'resolues' => (clone $statsQuery)->where('statut', 'resolue')->count(),
+            'critiques' => (clone $statsQuery)->where('criticite', 'critique')->whereIn('statut', ['ouverte', 'en_cours'])->count(),
         ];
 
         return view('papa.alertes.index', compact('alertes', 'stats'));
     }
     
-    public function create()
+    public function create(Request $request)
     {
-        // Récupérer les tâches et actions pour les select
-        $taches = \App\Models\Tache::whereNull('tache_parent_id')
-            ->orderBy('code')
-            ->get()
+        $user = $request->user();
+        
+        // Récupérer les tâches et actions pour les select (scoppées par département pour les commissaires)
+        $tachesQuery = \App\Models\Tache::whereNull('tache_parent_id')->orderBy('code');
+        $actionsQuery = \App\Models\ActionPrioritaire::orderBy('code');
+        
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $tachesQuery->forDepartment($departmentId);
+                $actionsQuery->forDepartment($departmentId);
+            }
+        }
+        
+        $taches = $tachesQuery->get()
             ->map(function($tache) {
                 return [
                     'id' => $tache->id,
@@ -70,8 +103,7 @@ class AlerteController extends Controller
                 ];
             });
         
-        $actions = \App\Models\ActionPrioritaire::orderBy('code')
-            ->get()
+        $actions = $actionsQuery->get()
             ->map(function($action) {
                 return [
                     'id' => $action->id,
@@ -113,8 +145,11 @@ class AlerteController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Alerte $alerte)
+    public function show(Request $request, Alerte $alerte)
     {
+        // 🔒 SÉCURITÉ : Vérifier que le commissaire peut voir cette alerte
+        $this->authorize('view', $alerte);
+        
         $alerte->load([
             'tache',
             'actionPrioritaire',

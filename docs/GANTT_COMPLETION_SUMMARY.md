@@ -121,3 +121,4 @@ Le module Gantt Phase 1 MVP est **prêt pour les tests**. La structure est compl
 
 **Prochaine étape suggérée** : Tests fonctionnels et corrections de bugs éventuels
 
+

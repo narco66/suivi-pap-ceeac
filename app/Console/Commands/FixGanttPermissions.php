@@ -92,3 +92,4 @@ class FixGanttPermissions extends Command
     }
 }
 
+

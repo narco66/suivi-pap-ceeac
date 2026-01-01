@@ -33,3 +33,4 @@ class MenuPermissionsSeeder extends Seeder
     }
 }
 
+

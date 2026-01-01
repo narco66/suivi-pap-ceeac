@@ -206,3 +206,4 @@ L'ancien menu horizontal (`<x-app.navigation />`) reste disponible pour compatib
 
 Ou simplement utiliser le layout `app.blade.php` qui détecte automatiquement l'authentification.
 
+

@@ -100,4 +100,68 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\AuditLog::class, 'actor_id');
     }
+
+    /**
+     * Relation 1-1 avec le Département (si l'utilisateur est commissaire)
+     * Un user ne peut être commissaire que d'un seul département
+     */
+    public function departement()
+    {
+        return $this->hasOne(Departement::class, 'commissioner_user_id');
+    }
+
+    /**
+     * Vérifier si l'utilisateur est un commissaire
+     */
+    public function isCommissaire(): bool
+    {
+        return $this->hasRole('commissaire') && $this->departement !== null;
+    }
+
+    /**
+     * Récupérer l'ID du département du commissaire
+     * Retourne null si l'utilisateur n'est pas commissaire
+     */
+    public function getDepartmentId(): ?int
+    {
+        if (!$this->isCommissaire()) {
+            return null;
+        }
+        
+        return $this->departement?->id;
+    }
+
+    /**
+     * Vérifier si l'utilisateur est Secrétaire Général
+     */
+    public function isSecretaireGeneral(): bool
+    {
+        return $this->hasRole('secretaire_general');
+    }
+
+    /**
+     * Récupérer toutes les Directions d'Appui (pour le SG)
+     * Le SG a autorité sur TOUTES les Directions d'Appui
+     */
+    public function getAppuiDirections()
+    {
+        if (!$this->isSecretaireGeneral()) {
+            return collect([]);
+        }
+
+        // Le SG a autorité sur TOUTES les Directions d'Appui
+        return \App\Models\DirectionAppui::where('actif', true)->get();
+    }
+
+    /**
+     * Récupérer les IDs des Directions d'Appui (pour le SG)
+     */
+    public function getAppuiDirectionIds(): array
+    {
+        if (!$this->isSecretaireGeneral()) {
+            return [];
+        }
+
+        return \App\Models\DirectionAppui::where('actif', true)->pluck('id')->toArray();
+    }
 }

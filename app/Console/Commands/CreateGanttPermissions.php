@@ -79,3 +79,4 @@ class CreateGanttPermissions extends Command
     }
 }
 
+

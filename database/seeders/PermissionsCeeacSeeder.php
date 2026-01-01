@@ -83,13 +83,20 @@ class PermissionsCeeacSeeder extends Seeder
         ];
         
         // Permissions pour Référentiels
-        $referentielPermissions = [
+        $legacyReferentielPermissions = [
             'viewAny referentiel',
             'view referentiel',
             'create referentiel',
             'update referentiel',
             'delete referentiel',
         ];
+        $referentielEntityPermissions = $this->referentielPermissionsForActions([
+            'viewAny',
+            'view',
+            'create',
+            'update',
+            'delete',
+        ]);
         
         // Permissions pour Audit
         $auditPermissions = [
@@ -104,6 +111,19 @@ class PermissionsCeeacSeeder extends Seeder
             'update gantt',
         ];
         
+        // Permissions pour Rapports
+        $rapportPermissions = [
+            'viewAny rapport',
+            'view rapport',
+            'create rapport',
+            'update rapport',
+            'delete rapport',
+            'restore rapport',
+            'forceDelete rapport',
+            'generate rapport',
+            'download rapport',
+        ];
+        
         // Créer toutes les permissions
         $allPermissions = array_merge(
             $papaPermissions,
@@ -113,9 +133,11 @@ class PermissionsCeeacSeeder extends Seeder
             $kpiPermissions,
             $alertePermissions,
             $avancementPermissions,
-            $referentielPermissions,
+            $legacyReferentielPermissions,
+            $referentielEntityPermissions,
             $auditPermissions,
-            $ganttPermissions
+            $ganttPermissions,
+            $rapportPermissions
         );
         
         foreach ($allPermissions as $permission) {
@@ -132,9 +154,12 @@ class PermissionsCeeacSeeder extends Seeder
     
     private function assignPermissionsToRoles(): void
     {
+        $referentielViewPermissions = $this->referentielPermissionsForActions(['viewAny', 'view']);
+        $referentielCreateUpdatePermissions = $this->referentielPermissionsForActions(['create', 'update']);
+
         // Présidence: accès complet en lecture, pas de modification
         $presidence = Role::findByName('presidence');
-        $presidence->givePermissionTo([
+        $presidence->givePermissionTo(array_merge([
             'viewAny papa', 'view papa',
             'viewAny objectif', 'view objectif',
             'viewAny action', 'view action',
@@ -142,15 +167,17 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny kpi', 'view kpi',
             'viewAny alerte', 'view alerte',
             'viewAny avancement', 'view avancement',
-            'viewAny referentiel', 'view referentiel',
             'viewAny journal', 'view journal',
             'view gantt',
             'export papa',
-        ]);
-        
+            'viewAny rapport', 'view rapport', 'download rapport',
+        ], $referentielViewPermissions, [
+            'viewAny referentiel', 'view referentiel',
+        ]));
+
         // Vice-Présidence: mêmes permissions que Présidence
         $vicePresidence = Role::findByName('vice_presidence');
-        $vicePresidence->givePermissionTo([
+        $vicePresidence->givePermissionTo(array_merge([
             'viewAny papa', 'view papa',
             'viewAny objectif', 'view objectif',
             'viewAny action', 'view action',
@@ -158,15 +185,17 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny kpi', 'view kpi',
             'viewAny alerte', 'view alerte',
             'viewAny avancement', 'view avancement',
-            'viewAny referentiel', 'view referentiel',
             'viewAny journal', 'view journal',
             'view gantt',
             'export papa',
-        ]);
-        
+            'viewAny rapport', 'view rapport', 'download rapport',
+        ], $referentielViewPermissions, [
+            'viewAny referentiel', 'view referentiel',
+        ]));
+
         // Secrétaire Général: accès complet sauf suppression
         $sg = Role::findByName('secretaire_general');
-        $sg->givePermissionTo([
+        $sg->givePermissionTo(array_merge([
             'viewAny papa', 'view papa', 'create papa', 'update papa', 'import papa', 'export papa',
             'viewAny objectif', 'view objectif', 'create objectif', 'update objectif',
             'viewAny action', 'view action', 'create action', 'update action',
@@ -174,14 +203,16 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny kpi', 'view kpi', 'create kpi', 'update kpi',
             'viewAny alerte', 'view alerte', 'create alerte', 'update alerte', 'resolve alerte',
             'viewAny avancement', 'view avancement', 'create avancement', 'update avancement',
-            'viewAny referentiel', 'view referentiel', 'create referentiel', 'update referentiel',
             'viewAny journal', 'view journal', 'export journal',
             'view gantt', 'update gantt',
-        ]);
-        
+            'viewAny rapport', 'view rapport', 'create rapport', 'update rapport', 'generate rapport', 'download rapport',
+        ], $referentielViewPermissions, $referentielCreateUpdatePermissions, [
+            'viewAny referentiel', 'view referentiel', 'create referentiel', 'update referentiel',
+        ]));
+
         // Commissaires: lecture + modification de leurs départements
         $commissaire = Role::findByName('commissaire');
-        $commissaire->givePermissionTo([
+        $commissaire->givePermissionTo(array_merge([
             'viewAny papa', 'view papa',
             'viewAny objectif', 'view objectif', 'update objectif',
             'viewAny action', 'view action', 'update action',
@@ -189,13 +220,15 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny kpi', 'view kpi', 'update kpi',
             'viewAny alerte', 'view alerte', 'update alerte', 'resolve alerte',
             'viewAny avancement', 'view avancement', 'create avancement', 'update avancement',
-            'viewAny referentiel', 'view referentiel',
             'view gantt',
-        ]);
-        
+            'viewAny rapport', 'view rapport', 'create rapport', 'update rapport', 'generate rapport', 'download rapport',
+        ], $referentielViewPermissions, [
+            'viewAny referentiel', 'view referentiel',
+        ]));
+
         // Directeurs: gestion complète de leurs directions
         $directeur = Role::findByName('directeur');
-        $directeur->givePermissionTo([
+        $directeur->givePermissionTo(array_merge([
             'viewAny papa', 'view papa',
             'viewAny objectif', 'view objectif', 'create objectif', 'update objectif',
             'viewAny action', 'view action', 'create action', 'update action',
@@ -203,10 +236,12 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny kpi', 'view kpi', 'create kpi', 'update kpi',
             'viewAny alerte', 'view alerte', 'create alerte', 'update alerte', 'resolve alerte',
             'viewAny avancement', 'view avancement', 'create avancement', 'update avancement',
-            'viewAny referentiel', 'view referentiel',
             'view gantt', 'update gantt',
-        ]);
-        
+            'viewAny rapport', 'view rapport', 'create rapport', 'update rapport', 'generate rapport', 'download rapport',
+        ], $referentielViewPermissions, [
+            'viewAny referentiel', 'view referentiel',
+        ]));
+
         // Points focaux: gestion de leurs tâches
         $pointFocal = Role::findByName('point_focal');
         $pointFocal->givePermissionTo([
@@ -219,10 +254,10 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny avancement', 'view avancement', 'create avancement', 'update avancement',
             'view gantt',
         ]);
-        
+
         // Audit Interne: accès complet en lecture + export
         $audit = Role::findByName('audit_interne');
-        $audit->givePermissionTo([
+        $audit->givePermissionTo(array_merge([
             'viewAny papa', 'view papa',
             'viewAny objectif', 'view objectif',
             'viewAny action', 'view action',
@@ -230,12 +265,13 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny kpi', 'view kpi',
             'viewAny alerte', 'view alerte',
             'viewAny avancement', 'view avancement',
-            'viewAny referentiel', 'view referentiel',
             'viewAny journal', 'view journal', 'export journal',
             'view gantt',
             'export papa',
-        ]);
-        
+        ], $referentielViewPermissions, [
+            'viewAny referentiel', 'view referentiel',
+        ]));
+
         // ACC: gestion des alertes
         $acc = Role::findByName('acc');
         $acc->givePermissionTo([
@@ -248,10 +284,10 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny avancement', 'view avancement',
             'view gantt',
         ]);
-        
+
         // CFC: contrôle et validation
         $cfc = Role::findByName('cfc');
-        $cfc->givePermissionTo([
+        $cfc->givePermissionTo(array_merge([
             'viewAny papa', 'view papa', 'update papa',
             'viewAny objectif', 'view objectif', 'update objectif',
             'viewAny action', 'view action', 'update action',
@@ -259,14 +295,15 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny kpi', 'view kpi', 'update kpi',
             'viewAny alerte', 'view alerte', 'update alerte', 'resolve alerte',
             'viewAny avancement', 'view avancement', 'update avancement',
-            'viewAny referentiel', 'view referentiel',
             'viewAny journal', 'view journal',
             'view gantt', 'update gantt',
-        ]);
-        
+        ], $referentielViewPermissions, [
+            'viewAny referentiel', 'view referentiel',
+        ]));
+
         // Bureau Liaison: accès en lecture
         $bureauLiaison = Role::findByName('bureau_liaison');
-        $bureauLiaison->givePermissionTo([
+        $bureauLiaison->givePermissionTo(array_merge([
             'viewAny papa', 'view papa',
             'viewAny objectif', 'view objectif',
             'viewAny action', 'view action',
@@ -274,12 +311,36 @@ class PermissionsCeeacSeeder extends Seeder
             'viewAny kpi', 'view kpi',
             'viewAny alerte', 'view alerte',
             'viewAny avancement', 'view avancement',
-            'viewAny referentiel', 'view referentiel',
             'view gantt',
-        ]);
-        
+        ], $referentielViewPermissions, [
+            'viewAny referentiel', 'view referentiel',
+        ]));
+
         // Admin DSI: accès complet
         $admin = Role::findByName('admin_dsi');
         $admin->givePermissionTo(Permission::all());
+    }
+
+    private function referentielResources(): array
+    {
+        return [
+            'referentiel.direction-technique',
+            'referentiel.direction-appui',
+            'referentiel.departement',
+            'referentiel.commission',
+            'referentiel.commissaire',
+        ];
+    }
+
+    private function referentielPermissionsForActions(array $actions): array
+    {
+        $permissions = [];
+        foreach ($this->referentielResources() as $resource) {
+            foreach ($actions as $action) {
+                $permissions[] = "{$action} {$resource}";
+            }
+        }
+
+        return $permissions;
     }
 }

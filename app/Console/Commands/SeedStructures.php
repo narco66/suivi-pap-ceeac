@@ -26,3 +26,4 @@ class SeedStructures extends Command
 }
 
 
+

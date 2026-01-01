@@ -30,6 +30,30 @@ class TachePolicy
             return true;
         }
         
+        // Secrétaire Général : peut voir uniquement les tâches d'appui
+        if ($user->isSecretaireGeneral()) {
+            // 🔒 SÉCURITÉ : Le SG ne peut voir QUE les tâches d'appui
+            if (!$tache->isAppui()) {
+                return false; // Accès interdit aux tâches techniques
+            }
+            return $user->hasPermissionTo('view tache') || 
+                   $user->hasPermissionTo('view papa');
+        }
+        
+        // Commissaire : peut voir uniquement les tâches de son département
+        if ($user->isCommissaire()) {
+            $userDepartmentId = $user->getDepartmentId();
+            $tacheDepartmentId = $tache->getDepartmentId();
+            
+            // Si la tâche n'a pas de département, le commissaire ne peut pas la voir
+            if ($tacheDepartmentId === null) {
+                return false;
+            }
+            
+            // Vérifier que la tâche appartient au département du commissaire
+            return $userDepartmentId === $tacheDepartmentId;
+        }
+        
         // Utilisateurs avec permission explicite
         if ($user->hasPermissionTo('view tache') || $user->hasPermissionTo('view papa')) {
             return true;

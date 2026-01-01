@@ -66,3 +66,4 @@ class SidebarTest extends TestCase
     }
 }
 
+

@@ -28,12 +28,13 @@ class ExportController extends Controller
         $type = $request->input('type');
         $module = $request->input('module');
         $filename = $this->generateFilename($module, $type);
+        $user = $request->user();
 
         try {
             if ($type === 'excel') {
-                return $this->exportExcel($module, $filename);
+                return $this->exportExcel($module, $filename, $user);
             } else {
-                return $this->exportPdf($module, $filename);
+                return $this->exportPdf($module, $filename, $user);
             }
         } catch (\Exception $e) {
             \Log::error('Erreur lors de l\'export: ' . $e->getMessage());
@@ -43,22 +44,43 @@ class ExportController extends Controller
         }
     }
 
-    private function exportExcel($module, $filename)
+    private function exportExcel($module, $filename, $user = null)
     {
+        // 🔒 SÉCURITÉ : Déterminer le scope selon le rôle
+        $isCommissaire = $user && $user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi']);
+        $departmentId = $isCommissaire ? $user->getDepartmentId() : null;
+        
         switch ($module) {
             case 'papa':
                 return Excel::download(new PapaExport(), $filename);
             
             case 'objectifs':
-                $objectifs = Objectif::with(['papaVersion.papa', 'actionPrioritaires'])->get();
+                $objectifsQuery = Objectif::with(['papaVersion.papa', 'actionPrioritaires']);
+                // 🔒 SÉCURITÉ : Scope département pour les commissaires
+                if ($isCommissaire && $departmentId) {
+                    $objectifsQuery->whereHas('actionsPrioritaires', function($q) use ($departmentId) {
+                        $q->forDepartment($departmentId);
+                    });
+                }
+                $objectifs = $objectifsQuery->get();
                 return Excel::download(new \App\Exports\ObjectifExport($objectifs), $filename);
             
             case 'kpi':
-                $kpis = Kpi::with(['objectif', 'creePar'])->get();
+                $kpisQuery = Kpi::with(['actionPrioritaire', 'actionPrioritaire.objectif']);
+                // 🔒 SÉCURITÉ : Scope département pour les commissaires
+                if ($isCommissaire && $departmentId) {
+                    $kpisQuery->forDepartment($departmentId);
+                }
+                $kpis = $kpisQuery->get();
                 return Excel::download(new \App\Exports\KpiExport($kpis), $filename);
             
             case 'alertes':
-                $alertes = Alerte::with(['tache', 'actionPrioritaire', 'creePar', 'assigneeA'])->get();
+                $alertesQuery = Alerte::with(['tache', 'actionPrioritaire', 'creePar', 'assigneeA']);
+                // 🔒 SÉCURITÉ : Scope département pour les commissaires
+                if ($isCommissaire && $departmentId) {
+                    $alertesQuery->forDepartment($departmentId);
+                }
+                $alertes = $alertesQuery->get();
                 return Excel::download(new \App\Exports\AlerteExport($alertes), $filename);
             
             default:
@@ -66,7 +88,7 @@ class ExportController extends Controller
         }
     }
 
-    private function exportPdf($module, $filename)
+    private function exportPdf($module, $filename, $user = null)
     {
         // Pour l'instant, on redirige vers Excel car les vues PDF ne sont pas encore créées
         // TODO: Créer les vues PDF pour chaque module
@@ -75,20 +97,41 @@ class ExportController extends Controller
             ->with('info', 'L\'export PDF n\'est pas encore disponible. Veuillez utiliser l\'export Excel.');
     }
 
-    private function getDataForPdf($module)
+    private function getDataForPdf($module, $user = null)
     {
+        // 🔒 SÉCURITÉ : Déterminer le scope selon le rôle
+        $isCommissaire = $user && $user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi']);
+        $departmentId = $isCommissaire ? $user->getDepartmentId() : null;
+        
         switch ($module) {
             case 'papa':
                 return ['papas' => \App\Models\Papa::with('versions')->get()];
             
             case 'objectifs':
-                return ['objectifs' => Objectif::with(['papaVersion.papa', 'actionPrioritaires'])->get()];
+                $objectifsQuery = Objectif::with(['papaVersion.papa', 'actionPrioritaires']);
+                // 🔒 SÉCURITÉ : Scope département pour les commissaires
+                if ($isCommissaire && $departmentId) {
+                    $objectifsQuery->whereHas('actionsPrioritaires', function($q) use ($departmentId) {
+                        $q->forDepartment($departmentId);
+                    });
+                }
+                return ['objectifs' => $objectifsQuery->get()];
             
             case 'kpi':
-                return ['kpis' => Kpi::with(['objectif', 'creePar'])->get()];
+                $kpisQuery = Kpi::with(['actionPrioritaire']);
+                // 🔒 SÉCURITÉ : Scope département pour les commissaires
+                if ($isCommissaire && $departmentId) {
+                    $kpisQuery->forDepartment($departmentId);
+                }
+                return ['kpis' => $kpisQuery->get()];
             
             case 'alertes':
-                return ['alertes' => Alerte::with(['tache', 'actionPrioritaire', 'creePar', 'assigneeA'])->get()];
+                $alertesQuery = Alerte::with(['tache', 'actionPrioritaire', 'creePar', 'assigneeA']);
+                // 🔒 SÉCURITÉ : Scope département pour les commissaires
+                if ($isCommissaire && $departmentId) {
+                    $alertesQuery->forDepartment($departmentId);
+                }
+                return ['alertes' => $alertesQuery->get()];
             
             default:
                 throw new \Exception('Module non supporté');

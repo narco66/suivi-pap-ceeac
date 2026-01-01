@@ -378,3 +378,4 @@ Pour toute question ou problème:
 - Vérifier les logs: `storage/logs/laravel.log`
 
 
+

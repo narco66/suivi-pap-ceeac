@@ -112,3 +112,4 @@ Pour utiliser explicitement le layout avec sidebar :
 - Le helper `NavigationHelper` est chargé via `composer.json` autoload files
 - Les fonctions de fallback dans `sidebar.blade.php` garantissent le fonctionnement même si le helper n'est pas chargé
 
+

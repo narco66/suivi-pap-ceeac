@@ -43,3 +43,4 @@ class DirectionTechniqueFactory extends Factory
 
 
 
+

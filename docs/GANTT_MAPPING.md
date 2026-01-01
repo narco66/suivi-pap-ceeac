@@ -182,3 +182,4 @@ GET    /api/projects/{papa}/gantt/export   → Export PDF (optionnel)
 **Date**: 2025-01-01  
 **Auteur**: Codex (AI Assistant)
 
+

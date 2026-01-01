@@ -105,4 +105,54 @@ class Tache extends Model
     {
         return $this->hasMany(GanttAuditLog::class, 'task_id');
     }
+
+    /**
+     * Relation avec le département (via action prioritaire -> direction technique)
+     * Utilise une relation indirecte via actionPrioritaire
+     */
+    public function departement()
+    {
+        // Relation indirecte : Tache -> ActionPrioritaire -> DirectionTechnique -> Departement
+        return $this->actionPrioritaire?->departement;
+    }
+
+    /**
+     * Scope pour filtrer les tâches par département
+     */
+    public function scopeForDepartment($query, ?int $departmentId)
+    {
+        if ($departmentId === null) {
+            return $query->whereDoesntHave('actionPrioritaire.directionTechnique');
+        }
+
+        return $query->whereHas('actionPrioritaire.directionTechnique', function ($q) use ($departmentId) {
+            $q->where('departement_id', $departmentId);
+        });
+    }
+
+    /**
+     * Récupérer l'ID du département de la tâche
+     */
+    public function getDepartmentId(): ?int
+    {
+        return $this->actionPrioritaire?->getDepartmentId();
+    }
+
+    /**
+     * Vérifier si la tâche est liée à une action d'appui
+     */
+    public function isAppui(): bool
+    {
+        return $this->actionPrioritaire?->isAppui() ?? false;
+    }
+
+    /**
+     * Scope pour filtrer les tâches d'appui uniquement
+     */
+    public function scopeForAppui($query)
+    {
+        return $query->whereHas('actionPrioritaire', function ($q) {
+            $q->whereNotNull('direction_appui_id');
+        });
+    }
 }

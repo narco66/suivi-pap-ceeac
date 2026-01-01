@@ -92,3 +92,4 @@ Si le problème persiste après ces étapes:
 2. Vérifiez les logs: `storage/logs/laravel.log`
 3. Vérifiez que les assets sont compilés: `npm run build`
 
+

@@ -150,3 +150,4 @@ Le `GanttTaskResource` retourne :
 
 **Action immédiate** : Créer des données de test et compiler les assets, puis tester l'accès à `/gantt`
 
+

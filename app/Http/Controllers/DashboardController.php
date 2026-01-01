@@ -16,72 +16,113 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Statistiques générales
+        $user = $request->user();
+        
+        // 🔒 SÉCURITÉ : Déterminer le scope selon le rôle
+        $isCommissaire = $user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi']);
+        $departmentId = $isCommissaire ? $user->getDepartmentId() : null;
+        
+        // Base queries avec scope département pour les commissaires
+        $actionsQuery = ActionPrioritaire::query();
+        $tachesQuery = Tache::whereNull('tache_parent_id');
+        $alertesQuery = Alerte::query();
+        $kpisQuery = Kpi::query();
+        $objectifsQuery = Objectif::query();
+        
+        // 🔒 SÉCURITÉ : Appliquer scope département pour les commissaires
+        if ($isCommissaire && $departmentId) {
+            $actionsQuery->forDepartment($departmentId);
+            $tachesQuery->forDepartment($departmentId);
+            $alertesQuery->forDepartment($departmentId);
+            $kpisQuery->forDepartment($departmentId);
+            // Objectifs : filtrer via actions prioritaires du département
+            $objectifsQuery->whereHas('actionsPrioritaires', function($q) use ($departmentId) {
+                $q->forDepartment($departmentId);
+            });
+        }
+        
+        // Statistiques générales (scoppées par département pour les commissaires)
         $stats = [
             'papas_actifs' => Papa::where('statut', '!=', 'cloture')
                 ->where('statut', '!=', 'archive')
                 ->count(),
-            'objectifs_total' => Objectif::count(),
-            'objectifs_en_cours' => Objectif::whereIn('statut', ['planifie', 'en_cours'])->count(),
-            'actions_total' => ActionPrioritaire::count(),
-            'actions_en_cours' => ActionPrioritaire::whereIn('statut', ['planifie', 'en_cours'])->count(),
-            'taches_total' => Tache::whereNull('tache_parent_id')->count(), // Seulement les tâches principales
-            'taches_en_cours' => Tache::whereNull('tache_parent_id')
+            'objectifs_total' => (clone $objectifsQuery)->count(),
+            'objectifs_en_cours' => (clone $objectifsQuery)->whereIn('statut', ['planifie', 'en_cours'])->count(),
+            'actions_total' => (clone $actionsQuery)->count(),
+            'actions_en_cours' => (clone $actionsQuery)->whereIn('statut', ['planifie', 'en_cours'])->count(),
+            'taches_total' => (clone $tachesQuery)->count(),
+            'taches_en_cours' => (clone $tachesQuery)
                 ->whereIn('statut', ['planifie', 'en_cours'])
                 ->count(),
-            'alertes_total' => Alerte::count(),
-            'alertes_ouvertes' => Alerte::whereIn('statut', ['ouverte', 'en_cours'])->count(),
-            'alertes_critiques' => Alerte::where('criticite', 'critique')
+            'alertes_total' => (clone $alertesQuery)->count(),
+            'alertes_ouvertes' => (clone $alertesQuery)->whereIn('statut', ['ouverte', 'en_cours'])->count(),
+            'alertes_critiques' => (clone $alertesQuery)->where('criticite', 'critique')
                 ->whereIn('statut', ['ouverte', 'en_cours'])
                 ->count(),
-            'kpis_total' => Kpi::count(),
-            'kpis_sous_seuil' => Kpi::where('pourcentage_realisation', '<', 80)
+            'kpis_total' => (clone $kpisQuery)->count(),
+            'kpis_sous_seuil' => (clone $kpisQuery)->where('pourcentage_realisation', '<', 80)
                 ->where('statut', '!=', 'atteint')
                 ->count(),
         ];
 
-        // PAPA récents
-        $papasRecents = Papa::with('versions')
-            ->orderBy('annee', 'desc')
-            ->take(5)
-            ->get();
+        // PAPA récents (tous pour admins, filtrés pour commissaires)
+        $papasQuery = Papa::with('versions')->orderBy('annee', 'desc');
+        if ($isCommissaire && $departmentId) {
+            // Pour les commissaires, filtrer les PAPA qui ont des objectifs avec actions du département
+            $papasQuery->whereHas('versions.objectifs.actionsPrioritaires', function($q) use ($departmentId) {
+                $q->forDepartment($departmentId);
+            });
+        }
+        $papasRecents = $papasQuery->take(5)->get();
 
-        // Alertes récentes (critiques et vigilance)
-        $alertesRecentes = Alerte::with(['tache', 'actionPrioritaire'])
+        // Alertes récentes (critiques et vigilance) - scoppées par département
+        $alertesRecentesQuery = Alerte::with(['tache', 'actionPrioritaire'])
             ->whereIn('criticite', ['vigilance', 'critique'])
             ->whereIn('statut', ['ouverte', 'en_cours'])
-            ->orderBy('date_creation', 'desc')
-            ->take(10)
-            ->get();
+            ->orderBy('date_creation', 'desc');
+        if ($isCommissaire && $departmentId) {
+            $alertesRecentesQuery->forDepartment($departmentId);
+        }
+        $alertesRecentes = $alertesRecentesQuery->take(10)->get();
 
-        // Tâches en retard
-        $tachesEnRetard = Tache::whereNull('tache_parent_id')
+        // Tâches en retard - scoppées par département
+        $tachesEnRetardQuery = Tache::whereNull('tache_parent_id')
             ->where('statut', 'en_retard')
             ->where('date_fin_prevue', '<', Carbon::now())
             ->with(['actionPrioritaire.objectif.papaVersion.papa', 'responsable'])
-            ->orderBy('date_fin_prevue', 'asc')
-            ->take(10)
-            ->get();
+            ->orderBy('date_fin_prevue', 'asc');
+        if ($isCommissaire && $departmentId) {
+            $tachesEnRetardQuery->forDepartment($departmentId);
+        }
+        $tachesEnRetard = $tachesEnRetardQuery->take(10)->get();
 
         // Évolution de l'avancement (derniers 6 mois)
         $avancementEvolution = $this->getAvancementEvolution();
 
-        // Répartition par statut
+        // Répartition par statut - scoppée par département
+        $repartitionStatutsQuery = Tache::whereNull('tache_parent_id');
+        if ($isCommissaire && $departmentId) {
+            $repartitionStatutsQuery->forDepartment($departmentId);
+        }
         $repartitionStatuts = [
-            'termine' => Tache::whereNull('tache_parent_id')->where('statut', 'termine')->count(),
-            'en_cours' => Tache::whereNull('tache_parent_id')->where('statut', 'en_cours')->count(),
-            'en_retard' => Tache::whereNull('tache_parent_id')->where('statut', 'en_retard')->count(),
-            'planifie' => Tache::whereNull('tache_parent_id')->where('statut', 'planifie')->count(),
-            'bloque' => Tache::whereNull('tache_parent_id')->where('statut', 'bloque')->count(),
+            'termine' => (clone $repartitionStatutsQuery)->where('statut', 'termine')->count(),
+            'en_cours' => (clone $repartitionStatutsQuery)->where('statut', 'en_cours')->count(),
+            'en_retard' => (clone $repartitionStatutsQuery)->where('statut', 'en_retard')->count(),
+            'planifie' => (clone $repartitionStatutsQuery)->where('statut', 'planifie')->count(),
+            'bloque' => (clone $repartitionStatutsQuery)->where('statut', 'bloque')->count(),
         ];
 
-        // Répartition par criticité
+        // Répartition par criticité - scoppée par département
+        $repartitionCriticiteQuery = Tache::whereNull('tache_parent_id');
+        if ($isCommissaire && $departmentId) {
+            $repartitionCriticiteQuery->forDepartment($departmentId);
+        }
         $repartitionCriticite = [
-            'normal' => Tache::whereNull('tache_parent_id')->where('criticite', 'normal')->count(),
-            'vigilance' => Tache::whereNull('tache_parent_id')->where('criticite', 'vigilance')->count(),
-            'critique' => Tache::whereNull('tache_parent_id')->where('criticite', 'critique')->count(),
+            'normal' => (clone $repartitionCriticiteQuery)->where('criticite', 'normal')->count(),
+            'vigilance' => (clone $repartitionCriticiteQuery)->where('criticite', 'vigilance')->count(),
+            'critique' => (clone $repartitionCriticiteQuery)->where('criticite', 'critique')->count(),
         ];
 
         return view('dashboard', compact(

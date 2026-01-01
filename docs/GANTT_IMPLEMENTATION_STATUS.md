@@ -238,3 +238,4 @@ Le `GanttTaskResource` retourne le format standard :
 
 **Prochaine étape**: Corriger les points critiques listés ci-dessus, puis tester la Phase 1 MVP.
 
+

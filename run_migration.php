@@ -11,3 +11,4 @@ $exitCode = $kernel->call('migrate', ['--force' => true]);
 echo "\nMigration terminée avec le code : " . $exitCode . "\n";
 
 
+

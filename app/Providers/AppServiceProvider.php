@@ -41,6 +41,8 @@ use App\Policies\DepartementPolicy;
 use App\Policies\DirectionTechniquePolicy;
 use App\Policies\DirectionAppuiPolicy;
 use App\Policies\GanttTaskPolicy;
+use App\Models\Rapport;
+use App\Policies\RapportPolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -68,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
         Departement::class => DepartementPolicy::class,
         DirectionTechnique::class => DirectionTechniquePolicy::class,
         DirectionAppui::class => DirectionAppuiPolicy::class,
+        Rapport::class => RapportPolicy::class,
     ];
 
     /**

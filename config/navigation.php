@@ -147,6 +147,14 @@ return [
             'active' => ['ressources.*'],
         ],
         [
+            'label' => 'Reporting Institutionnel',
+            'icon' => 'bi-file-earmark-text',
+            'route' => 'rapports.index',
+            'permission' => null,
+            'active' => ['rapports.*'],
+            'badge' => null,
+        ],
+        [
             'label' => 'Import/Export',
             'icon' => 'bi-arrow-left-right',
             'permission' => null,

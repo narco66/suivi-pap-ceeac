@@ -103,6 +103,8 @@ Cet audit a été effectué pour identifier et corriger les problèmes d'autoris
 ]
 ```
 
+Les permissions associées aux référentiels sont maintenant définies par ressource. Chaque rôle concerné dispose des couples `viewAny referentiel.<ressource>` et `view referentiel.<ressource>` pour les cinq ressources suivantes : `direction-technique`, `direction-appui`, `departement`, `commission`, et `commissaire`. Le secrétaire général ajoute également les versions `create` et `update` pour chacune de ces ressources afin de rester cohérent avec les policies.
+
 ## État Actuel des Rôles et Permissions
 
 ### Rôles Définis
@@ -173,5 +175,6 @@ php artisan audit:users-roles-permissions --role=admin_dsi
 - Les policies utilisent maintenant une logique cohérente : vérification du rôle admin en premier, puis des permissions Spatie
 - Les règles métier (verrouillage PAPA) sont respectées même pour les administrateurs
 - La commande d'audit permet de diagnostiquer rapidement les problèmes d'autorisation
+
 
 

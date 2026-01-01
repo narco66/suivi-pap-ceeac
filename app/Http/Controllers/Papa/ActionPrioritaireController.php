@@ -13,12 +13,23 @@ class ActionPrioritaireController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+        
         $query = ActionPrioritaire::with([
             'objectif.papaVersion.papa',
             'taches' => function($q) {
                 $q->whereNull('tache_parent_id');
             },
         ]);
+
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        // Un commissaire ne voit que les actions de son département
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $query->forDepartment($departmentId);
+            }
+        }
 
         // Filtres
         if ($request->filled('objectif_id')) {
@@ -80,17 +91,27 @@ class ActionPrioritaireController extends Controller
                 ];
             });
 
-        // Statistiques
+        // Statistiques (scoppées par département pour les commissaires)
+        $statsQuery = ActionPrioritaire::query();
+        
+        // 🔒 SÉCURITÉ : Scope département pour les commissaires
+        if ($user->isCommissaire() && !$user->hasAnyRole(['admin', 'admin_dsi'])) {
+            $departmentId = $user->getDepartmentId();
+            if ($departmentId) {
+                $statsQuery->forDepartment($departmentId);
+            }
+        }
+        
         $stats = [
-            'total' => ActionPrioritaire::count(),
-            'par_statut' => ActionPrioritaire::selectRaw('statut, count(*) as total')
+            'total' => $statsQuery->count(),
+            'par_statut' => (clone $statsQuery)->selectRaw('statut, count(*) as total')
                 ->groupBy('statut')
                 ->pluck('total', 'statut'),
-            'en_retard' => ActionPrioritaire::where('date_fin_prevue', '<', now())
+            'en_retard' => (clone $statsQuery)->where('date_fin_prevue', '<', now())
                 ->where('statut', '!=', 'termine')
                 ->count(),
-            'en_cours' => ActionPrioritaire::where('statut', 'en_cours')->count(),
-            'terminees' => ActionPrioritaire::where('statut', 'termine')->count(),
+            'en_cours' => (clone $statsQuery)->where('statut', 'en_cours')->count(),
+            'terminees' => (clone $statsQuery)->where('statut', 'termine')->count(),
         ];
 
         return view('papa.actions-prioritaires.index', compact('actions', 'objectifs', 'stats'));
@@ -151,8 +172,10 @@ class ActionPrioritaireController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
+        $user = $request->user();
+        
         $action = ActionPrioritaire::with([
             'objectif.papaVersion.papa',
             'taches' => function($query) {
@@ -163,6 +186,9 @@ class ActionPrioritaireController extends Controller
                 $query->whereIn('statut', ['ouverte', 'en_cours'])->orderBy('date_creation', 'desc');
             },
         ])->findOrFail($id);
+
+        // 🔒 SÉCURITÉ : Vérifier que le commissaire peut voir cette action
+        $this->authorize('view', $action);
 
         // Statistiques de l'action
         $stats = [

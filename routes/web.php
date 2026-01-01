@@ -18,6 +18,7 @@ use App\Http\Controllers\Referentiel\DirectionTechniqueController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 // Routes publiques - Landing
@@ -69,6 +70,11 @@ Route::middleware('auth')->group(function () {
     Route::post('import', [ImportController::class, 'store'])->name('import.store');
     Route::get('export', [ExportController::class, 'index'])->name('export.index');
     Route::post('export', [ExportController::class, 'export'])->name('export.export');
+    
+    // Rapports
+    Route::resource('rapports', ReportController::class);
+    Route::post('rapports/{rapport}/generate', [ReportController::class, 'generate'])->name('rapports.generate');
+    Route::get('rapports/{rapport}/download', [ReportController::class, 'download'])->name('rapports.download');
     
     // Fichiers sécurisés
     Route::get('files/{path}', [FileController::class, 'serve'])->where('path', '.*')->name('files.serve');

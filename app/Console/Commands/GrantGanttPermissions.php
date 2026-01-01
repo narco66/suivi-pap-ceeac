@@ -84,3 +84,4 @@ class GrantGanttPermissions extends Command
     }
 }
 
+
